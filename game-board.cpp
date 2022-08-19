@@ -1,11 +1,22 @@
 #ifndef CHESSBOARD_GAME_BOARD_CPP
 #define CHESSBOARD_GAME_BOARD_CPP
 
-#include "side.cpp"
 #include "pos.cpp"
+#include "side.cpp"
+#include "colors.cpp"
+
+#include <tuple>
+#include <functional>
 #include <cassert>
 
+#define SCREEN_WIDTH COLS
+#define SCREEN_HEIGHT LINES
+
 namespace chessboard {
+
+	using std::pair;
+	using std::function;
+
 
 	struct GameBoard {
 		public:
@@ -27,7 +38,9 @@ namespace chessboard {
 
 			static const char *borderLine, *borderTopLine, *borderBottomLine, *fieldLine;
 
-			static int boardStartY, boardStartX;
+			static int
+					startY, startX,
+					boardStartY, boardStartX;
 
 			static void initStatic() {
 				char* borderLine = repeat_char(' ', FULL_WIDTH);
@@ -41,8 +54,11 @@ namespace chessboard {
 				borderBottomLine = repeat_str("▄", FULL_WIDTH);
 				fieldLine = repeat_char(' ', FIELD_WIDTH);
 
-				boardStartY = (SCREEN_HEIGHT - BOARD_HEIGHT) / 2,
-				boardStartX = (SCREEN_WIDTH - BOARD_WIDTH) / 2;
+				startY = (SCREEN_HEIGHT - FULL_HEIGHT) / 2;
+				startX = (SCREEN_WIDTH - FULL_WIDTH) / 2;
+
+				boardStartY = startY + PADDING_HEIGHT,
+				boardStartX = startX + PADDING_WIDTH;
 			}
 
 
@@ -51,7 +67,7 @@ namespace chessboard {
 			static constexpr figure_t N_FIGURE = -1;
 
 
-			struct board_t {
+			struct Board {
 				figure_t board[SQUARE];
 
 				figure_t& operator[](const Pos& pos) {
@@ -87,7 +103,7 @@ namespace chessboard {
 
 		protected:
 
-			board_t board;
+			Board board;
 
 			Pos selectedPos,
 				offPos = NPOS;
@@ -95,7 +111,7 @@ namespace chessboard {
 			Side currentSide, defaultSide;
 
 
-			explicit GameBoard(const board_t& board, Pos selectedPos, Side defaultSide) noexcept:
+			explicit GameBoard(const Board& board, Pos selectedPos, Side defaultSide) noexcept:
 				board(board), selectedPos(selectedPos), currentSide(defaultSide), defaultSide(defaultSide) {}
 
 			GameBoard(const GameBoard&) = delete;
@@ -115,7 +131,7 @@ namespace chessboard {
 				}
 			}
 
-			virtual pair<pair_t, const char* const*> getColorPairAndFigureTexture(int, int) const = 0;
+			virtual pair<pair_t, texture_t> getColorPairAndFigureTexture(int, int) const = 0;
 
 		public:
 			virtual void step() = 0;
@@ -125,9 +141,6 @@ namespace chessboard {
 			virtual bool stepAvailable() const = 0;
 
 			void draw() const {
-				const int
-						startY = (SCREEN_HEIGHT - FULL_HEIGHT) / 2,
-						startX = (SCREEN_WIDTH - FULL_WIDTH) / 2;
 
 				attron(BORDER_COLOR_PAIR);
 
@@ -184,9 +197,9 @@ namespace chessboard {
 
 				move(fieldStartY, fieldStartX);
 
-				pair<pair_t, const char* const*> colorPairAndTexture = getColorPairAndFigureTexture(h, w);
+				pair<pair_t, texture_t> colorPairAndTexture = getColorPairAndFigureTexture(h, w);
 				pair_t fieldColorPair = colorPairAndTexture.first;
-				const char* const* texture = colorPairAndTexture.second;
+				texture_t texture = colorPairAndTexture.second;
 
 				attron(fieldColorPair);
 
@@ -203,14 +216,14 @@ namespace chessboard {
 					drawFrame(h, w, texture, fieldColorPair, OFF_FRAME_COLOR_ID);
 			}
 
-			void drawFrame(int h, int w, const char* const* texture, pair_t fieldColorPair, short frameColorID) const {
+			void drawFrame(int h, int w, texture_t texture, pair_t fieldColorPair, id_t frameColorID) const {
 				const int fieldStartY = boardStartY + h * FIELD_HEIGHT,
 				          fieldStartX = boardStartX + w * FIELD_WIDTH,
 
 				          fieldEndY = fieldStartY + FIELD_HEIGHT,
 				          fieldEndX = fieldStartX + FIELD_WIDTH - 1;
 
-				 const pair_t frameColorPair = COLOR_PAIR(frameColorID);
+				const pair_t frameColorPair = COLOR_PAIR(frameColorID);
 
 				if(texture == nullptr) {
 					attron(fieldColorPair + frameColorPair);
@@ -225,7 +238,7 @@ namespace chessboard {
 				} else {
 
 					function<void(int, const char*, bool)> drawHorisontalFrameBorder =
-						[=] (int startY, const char* line, bool upper) {
+						[=] (int borderStartY, const char* line, bool upper) {
 							const char* const pixel = upper ? "▀" : "▄";
 
 							for(int x = fieldStartX; *line != '\0'; ++line, ++x) {
@@ -233,27 +246,27 @@ namespace chessboard {
 									case 0x20: {
 										pair_t colorPair = fieldColorPair + frameColorPair;
 										attron(colorPair);
-										mvaddstr(startY, x, pixel);
+										mvaddstr(borderStartY, x, pixel);
 										attroff(colorPair);
 										break;
 									}
 
 									case 0xE2:
 										if((line[1] & 0xFF) == 0x96) {
-											short colorID;
+											id_t colorID, nullID;
 											pair_t colorPair;
 
 											switch(line[2] & 0xFF) {
 												case 0x80:
 												case 0x84:
 													upper ^ ((line[2] & 0xFF) == 0x80) ?
-														pair_content(fieldColorPair >> NCURSES_ATTR_SHIFT, &colorID, nullptr) :
-														pair_content(fieldColorPair >> NCURSES_ATTR_SHIFT, nullptr, &colorID);
+														pair_content(fieldColorPair >> NCURSES_ATTR_SHIFT, &colorID, &nullID) :
+														pair_content(fieldColorPair >> NCURSES_ATTR_SHIFT, &nullID, &colorID);
 
 													colorPair = COLOR_PAIR(colorID + frameColorID);
 
 													attron(colorPair);
-													mvaddstr(startY, x, pixel);
+													mvaddstr(borderStartY, x, pixel);
 													attroff(colorPair);
 											}
 
@@ -287,7 +300,9 @@ namespace chessboard {
 		*GameBoard::borderBottomLine = nullptr,
 		*GameBoard::fieldLine = nullptr;
 
-	int GameBoard::boardStartY = 0,
+	int GameBoard::startY = 0,
+	    GameBoard::startX = 0,
+	    GameBoard::boardStartY = 0,
 	    GameBoard::boardStartX = 0;
 }
 

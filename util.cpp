@@ -1,6 +1,8 @@
 #ifndef CHESSBOARD_UTIL_CPP
 #define CHESSBOARD_UTIL_CPP
 
+#include <cstring>
+
 namespace chessboard {
 
 	template<typename T, size_t N>
@@ -32,13 +34,6 @@ namespace chessboard {
 		result[0] = '\0';
 
 		return result - length;
-	}
-
-	typedef NCURSES_PAIRS_T pair_t;
-
-
-	static constexpr unsigned int hexColorToDemical(unsigned int hex) {
-		return ((hex >> 16) & 0xFF) * 1000 / 256 * 1'000'000 + ((hex >> 8) & 0xFF) * 1000 / 256 * 1'000 + (hex & 0xFF) * 1000 / 256;
 	}
 }
 

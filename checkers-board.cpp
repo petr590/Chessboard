@@ -3,40 +3,19 @@
 
 #include "game-board.cpp"
 #include "direction.cpp"
+#include "node.cpp"
+#include "textures.cpp"
+#include "log.cpp"
+
 #include <vector>
-#include <list>
 #include <algorithm>
 
 namespace chessboard {
 
 	using std::vector;
-	using std::list;
 	using std::find;
 	using std::begin;
 	using std::end;
-
-
-	struct Node {
-		list<Node*> childs;
-		Pos targetPos, eatPos;
-
-		Node(const Pos& targetPos, const Pos& eatPos) noexcept:
-			targetPos(targetPos), eatPos(eatPos) {}
-
-		~Node() {
-			for(const Node* node : childs)
-				delete node;
-		}
-
-		string toString() const {
-			string str = "{ target: " + targetPos.toString() + ", eat: " + eatPos.toString();
-
-			for(const Node* node : childs)
-				str += ", " + node->toString();
-
-			return str + " }";
-		}
-	};
 
 
 	struct CheckersBoard: GameBoard {
@@ -76,7 +55,7 @@ namespace chessboard {
 
 
 			explicit CheckersBoard(Side side) noexcept:
-				GameBoard({
+				CheckersBoard({
 					B,_,B,_,B,_,B,_,
 					_,B,_,B,_,B,_,B,
 					B,_,B,_,B,_,B,_,
@@ -85,14 +64,18 @@ namespace chessboard {
 					_,W,_,W,_,W,_,W,
 					W,_,W,_,W,_,W,_,
 					_,W,_,W,_,W,_,W,
-				}, {5, 1}, side) {
+				}, {5, 1}, side) {}
+
+
+			explicit CheckersBoard(const Board& board, const Pos& pos, Side side) noexcept:
+				GameBoard(board, pos, side) {
 
 				if(side == Side::BLACK)
 					flip();
 			}
 
 		protected:
-			virtual pair<pair_t, const char* const*> getColorPairAndFigureTexture(int h, int w) const override {
+			virtual pair<pair_t, texture_t> getColorPairAndFigureTexture(int h, int w) const override {
 				bool isBlackField = ((h + w) & 0x1) == 0;
 
 				figure_t checker = board[h * FIELDS + w];
@@ -286,7 +269,7 @@ namespace chessboard {
 			}
 
 			void printResult() const {
-				static constexpr int WIDTH = 20, HEIGHT = 6;
+				static constexpr int WIDTH = 21, HEIGHT = 5;
 				static const char
 						*const borderHorizontal = repeat_char(' ', WIDTH + 4),
 						*const line = repeat_char(' ', WIDTH);
