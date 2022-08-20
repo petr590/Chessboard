@@ -9,7 +9,7 @@ namespace chessboard {
 
 
 	enum class Direction {
-		FORWARD_LEFT, FORWARD_RIGHT, BACKWARD_LEFT, BACKWARD_RIGHT
+		NONE = -1, FORWARD_LEFT, FORWARD_RIGHT, BACKWARD_LEFT, BACKWARD_RIGHT
 	};
 
 	static const vector<Direction> ALL_DIRECTIONS {

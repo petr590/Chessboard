@@ -1,8 +1,8 @@
 #ifndef CHESSBOARD_COLORS_CPP
 #define CHESSBOARD_COLORS_CPP
 
-#include "typedefs.cpp"
 #include "util.cpp"
+#include "typedefs.h"
 
 namespace chessboard {
 
@@ -28,29 +28,32 @@ namespace chessboard {
 
 
 	static constexpr colordef_t
-		TEXT_COLOR        = 1000 << 16 | 200,
-		BORDER_COLOR      = 800,
-		WHITE_FIELD_COLOR = 1000,
-		BLACK_FIELD_COLOR = 000,
+		TEXT_COLOR          = 1000 << 16 | 200,
+		SELECTED_TEXT_COLOR = 1000 << 16 | 500,
+		BORDER_COLOR        = 800,
+		WHITE_FIELD_COLOR   = 1000,
+		BLACK_FIELD_COLOR   = 000,
 
 		WHITE_CHECKER_COLOR = 750,
 		BLACK_CHECKER_COLOR = 150;
 
 	static constexpr pair_t
-		TEXT_COLOR_PAIR        = COLOR_PAIR(1),
-		BORDER_COLOR_PAIR      = COLOR_PAIR(2),
-		WHITE_FIELD_COLOR_PAIR = COLOR_PAIR(3),
-		BLACK_FIELD_COLOR_PAIR = COLOR_PAIR(4);
+		TEXT_COLOR_PAIR          = COLOR_PAIR(1),
+		SELECTED_TEXT_COLOR_PAIR = COLOR_PAIR(2),
+		BORDER_COLOR_PAIR        = COLOR_PAIR(3),
+		WHITE_FIELD_COLOR_PAIR   = COLOR_PAIR(4),
+		BLACK_FIELD_COLOR_PAIR   = COLOR_PAIR(5);
 
 	static constexpr const pair_t CHECKER_COLOR_PAIRS[] {
-		COLOR_PAIR(5),
 		COLOR_PAIR(6),
 		COLOR_PAIR(7),
 		COLOR_PAIR(8),
+		COLOR_PAIR(9),
 	};
 
 	static constexpr const colordef_t COLOR_VALUES[] {
 		TEXT_COLOR,
+		SELECTED_TEXT_COLOR,
 		BORDER_COLOR,
 		WHITE_FIELD_COLOR,
 		BLACK_FIELD_COLOR,

@@ -110,7 +110,7 @@ namespace chessboard {
 
 			Side currentSide, defaultSide;
 
-
+		public:
 			explicit GameBoard(const Board& board, Pos selectedPos, Side defaultSide) noexcept:
 				board(board), selectedPos(selectedPos), currentSide(defaultSide), defaultSide(defaultSide) {}
 
@@ -123,17 +123,6 @@ namespace chessboard {
 				delete borderBottomLine;
 			}
 
-			void flip() {
-				for(figure_t *front = board, *back = front + SQUARE - 1, *center = front + SQUARE / 2; front < center; ++front, --back) {
-					figure_t figure = *front;
-					*front = *back;
-					*back = figure;
-				}
-			}
-
-			virtual pair<pair_t, texture_t> getColorPairAndFigureTexture(int, int) const = 0;
-
-		public:
 			virtual void step() = 0;
 
 			virtual bool keypress(int) = 0;
@@ -186,7 +175,19 @@ namespace chessboard {
 						drawField(h, w);
 			}
 
+			virtual void showResult() const = 0;
+
 		protected:
+			virtual pair<pair_t, texture_t> getColorPairAndFigureTexture(int, int) const = 0;
+
+			void flip() {
+				for(figure_t *front = board, *back = front + SQUARE - 1, *center = front + SQUARE / 2; front < center; ++front, --back) {
+					figure_t figure = *front;
+					*front = *back;
+					*back = figure;
+				}
+			}
+
 			void drawField(const Pos& pos) const {
 				return drawField(pos.y, pos.x);
 			}

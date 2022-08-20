@@ -2,6 +2,7 @@
 #define CHESSBOARD_CHECKERS_BOARD_CPP
 
 #include "game-board.cpp"
+#include "keys.cpp"
 #include "direction.cpp"
 #include "node.cpp"
 #include "textures.cpp"
@@ -40,14 +41,19 @@ namespace chessboard {
 				return checker & 0x1 ? Side::BLACK : Side::WHITE;
 			}
 
+			static bool isCheckerKing(figure_t checker) {
+				return checker & 0x2;
+			}
+
 			static const vector<Direction>& getCheckerDirections(figure_t checker) {
 				static const vector<Direction> PLAIN_DIRECTIONS { Direction::FORWARD_LEFT, Direction::FORWARD_RIGHT };
 				static const vector<Direction>& KING_DIRECTIONS = ALL_DIRECTIONS;
 
-				return checker & 0x2 ? KING_DIRECTIONS : PLAIN_DIRECTIONS;
+				return isCheckerKing(checker) ? KING_DIRECTIONS : PLAIN_DIRECTIONS;
 			}
 
-			int whiteCount = 12, blackCount = 12;
+			//int whiteCount = 12, blackCount = 12;
+			int whiteCount = 1, blackCount = 1;
 
 			int& countBySide(Side side) {
 				return side == Side::WHITE ? whiteCount : blackCount;
@@ -56,23 +62,31 @@ namespace chessboard {
 
 			explicit CheckersBoard(Side side) noexcept:
 				CheckersBoard({
-					B,_,B,_,B,_,B,_,
+					/*B,_,B,_,B,_,B,_,
 					_,B,_,B,_,B,_,B,
 					B,_,B,_,B,_,B,_,
 					_,_,_,_,_,_,_,_,
 					_,_,_,_,_,_,_,_,
 					_,W,_,W,_,W,_,W,
 					W,_,W,_,W,_,W,_,
-					_,W,_,W,_,W,_,W,
-				}, {5, 1}, side) {}
-
-
-			explicit CheckersBoard(const Board& board, const Pos& pos, Side side) noexcept:
-				GameBoard(board, pos, side) {
+					_,W,_,W,_,W,_,W,*/
+					_,_,_,_,_,_,_,_,
+					_,_,_,_,_,_,_,_,
+					_,_,_,_,_,_,_,_,
+					_,_,_,B,_,_,_,_,
+					_,_,_,_,_,_,_,_,
+					_,WK,_,_,_,_,_,_,
+					_,_,_,_,_,_,_,_,
+					_,_,_,_,_,_,_,_,
+				}, {5, 1}, side) {
 
 				if(side == Side::BLACK)
 					flip();
 			}
+
+
+			explicit CheckersBoard(const Board& board, const Pos& pos, Side side) noexcept:
+				GameBoard(board, pos, side) {}
 
 		protected:
 			virtual pair<pair_t, texture_t> getColorPairAndFigureTexture(int h, int w) const override {
@@ -80,7 +94,7 @@ namespace chessboard {
 
 				figure_t checker = board[h * FIELDS + w];
 				if(checker >= 0)
-					return { CHECKER_COLOR_PAIRS[(checker & 0x1) + (isBlackField << 1)], checker & 0x2 ? CHECKER_KING : CHECKER };
+					return { CHECKER_COLOR_PAIRS[(checker & 0x1) + (isBlackField << 1)], isCheckerKing(checker) ? CHECKER_KING : CHECKER };
 				else
 					return { isBlackField ? BLACK_FIELD_COLOR_PAIR : WHITE_FIELD_COLOR_PAIR, nullptr };
 			}
@@ -101,22 +115,57 @@ namespace chessboard {
 			}
 
 			const Node* availableSteps(const Pos& pos) {
-				Node* root = new Node(pos, NPOS);
+				Node* const root = new Node(pos);
 
-				for(Direction direction : getCheckerDirections(board[pos])) {
+				list<Pos> eatedPoses;
+
+				const figure_t checker = board[pos];
+
+				for(Direction direction : getCheckerDirections(checker)) {
 					Pos targetPos = pos;
 
 					Direction_step(direction, this, targetPos);
 
 					if(isValidPos(targetPos)) {
-
 						if(board[targetPos] == N_FIGURE)
-							root->childs.push_back(new Node(targetPos, NPOS));
+							root->addNode(new Node(targetPos));
+
+						if(isCheckerKing(checker)) {
+							Direction_step(direction, this, targetPos);
+
+							Node* currentNode = root;
+
+							while(isValidPos(targetPos)) {
+								const figure_t targerChecker = board[targetPos];
+
+								if(targerChecker == N_FIGURE) {
+									currentNode->addNode(new Node(targetPos));
+
+								} else if(getCheckerSide(targerChecker) != currentSide) {
+									Pos eatPos = targetPos;
+
+									Direction_step(direction, this, targetPos);
+
+									if(isValidPos(targetPos) && board[targetPos] == N_FIGURE) {
+										Node* newNode = new Node(targetPos, eatPos);
+										currentNode->addNode(newNode);
+										currentNode = newNode;
+										eatedPoses.push_back(eatPos);
+									} else {
+										break;
+									}
+
+								} else {
+									break;
+								}
+
+								Direction_step(direction, this, targetPos);
+							}
+						}
 					}
 				}
 
-				list<Pos> eatedPoses;
-				getEatPath(pos, root, static_cast<Direction>(-1), eatedPoses);
+				getEatPath(pos, root, Direction::NONE, eatedPoses);
 
 				return root;
 			}
@@ -145,7 +194,7 @@ namespace chessboard {
 
 							if(isValidPos(targetPos) && board[targetPos] == N_FIGURE) {
 								Node* targetNode = new Node(targetPos, eatPos);
-								node->childs.push_back(targetNode);
+								node->addNode(targetNode);
 								getEatPath(targetPos, targetNode, Direction_opposite(direction), eatedPoses);
 							}
 						}
@@ -156,7 +205,7 @@ namespace chessboard {
 
 			virtual bool keypress(int key) override {
 				switch(key) {
-					case 0xA: case 0x20: { // enter, space
+					case KEY_ENTER: case KEY_SPACE: {
 						figure_t checker = board[selectedPos];
 						if(checker != N_FIGURE && getCheckerSide(checker) == currentSide) {
 
@@ -165,6 +214,7 @@ namespace chessboard {
 
 							if(oldOffPos != NPOS)
 								drawField(oldOffPos);
+
 						} else if(offPos != NPOS) {
 
 							const Node* result = nullptr;
@@ -200,7 +250,11 @@ namespace chessboard {
 								return true;
 							};
 
-							processNode(availableSteps(offPos));
+							{
+								const Node* rootNode = availableSteps(offPos);
+								processNode(rootNode);
+								delete rootNode;
+							}
 
 							if(result != nullptr) {
 								figure_t checker = board[offPos];
@@ -268,7 +322,7 @@ namespace chessboard {
 				return false;
 			}
 
-			void printResult() const {
+			virtual void showResult() const override {
 				static constexpr int WIDTH = 21, HEIGHT = 5;
 				static const char
 						*const borderHorizontal = repeat_char(' ', WIDTH + 4),
@@ -302,6 +356,8 @@ namespace chessboard {
 				mvaddstr(startY + (HEIGHT - 1) / 2, startX + WIDTH / 2 - strlen(message) / 2 / 2, message);
 
 				attroff(TEXT_COLOR_PAIR);
+
+				getch();
 			}
 	};
 }
